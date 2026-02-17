@@ -2,7 +2,7 @@
 
 ## Install Dependencies
 
-In project root folder, run:
+In python folder, run:
 ```bash
 python3 venv -m --prompt SMAP .venv
 
