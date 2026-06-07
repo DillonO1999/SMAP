@@ -13,7 +13,7 @@ R_earth = 6378.137
 r1 = np.array([7000.0, 0.0, 0.0])
 # Rotate r1 by 120 degrees to create a realistic r2
 r2 = np.array([7000.0 * np.cos(np.radians(120)), 7000.0 * np.sin(np.radians(120)), 0.0])
-tof = 3600 * 4.0  # 4 hours
+tof = 3600 * 2.0  # 4 hours
 
 # --- 2. Solve & Propagate ---
 v1_trans, _ = lambert_universal(r1, r2, tof, mu)
@@ -39,28 +39,52 @@ ey = R_earth * np.outer(np.sin(u), np.sin(v))
 ez = R_earth * np.outer(np.ones(np.size(u)), np.cos(v))
 
 # Add Earth to Plot
-fig.add_trace(go.Surface(x=ex, y=ey, z=ez, colorscale='Blues', opacity=0.5, showscale=False, name="Earth"))
+fig.add_trace(go.Surface(x=ex, y=ey, z=ez, colorscale='Blues', opacity=0.7, showscale=False, name="Earth"))
 
 # Add Transfer Trajectory
 fig.add_trace(go.Scatter3d(x=x_pts, y=y_pts, z=z_pts, mode='lines', 
-                         line=dict(color='red', width=5), name="Transfer Orbit"))
+                         line=dict(color='orange', width=6), name="Transfer Orbit"))
 
 # Add Departure and Arrival Points
 fig.add_trace(go.Scatter3d(x=[r1[0]], y=[r1[1]], z=[r1[2]], mode='markers',
-                         marker=dict(size=6, color='green'), name="Departure"))
+                         marker=dict(size=8, color='cyan'), name="Departure"))
 fig.add_trace(go.Scatter3d(x=[r2[0]], y=[r2[1]], z=[r2[2]], mode='markers',
-                         marker=dict(size=6, color='orange'), name="Arrival"))
+                         marker=dict(size=8, color='magenta'), name="Arrival"))
 
-# Scene Camera and Layout
+# Deep Space Theme Styling (Fixed Properties)
 fig.update_layout(
-    title="SMAP Interactive Mission Planner",
-    scene=dict(
-        xaxis_title='X (km)',
-        yaxis_title='Y (km)',
-        zaxis_title='Z (km)',
-        aspectmode='data' # Keeps the Earth spherical, not an egg
+    title=dict(
+        text="SMAP Interactive Mission Planner",
+        font=dict(color="white", size=20)
     ),
-    margin=dict(r=0, l=0, b=0, t=40)
+    paper_bgcolor='black',  
+    plot_bgcolor='black',   
+    legend=dict(font=dict(color="white")),
+    scene=dict(
+        xaxis=dict(
+            title=dict(text='X (km)', font=dict(color="white")),
+            showgrid=False,       
+            showbackground=False, 
+            showticklabels=False,  # Completely hides the background coordinate numbers
+            zeroline=False
+        ),
+        yaxis=dict(
+            title=dict(text='Y (km)', font=dict(color="white")),
+            showgrid=False,
+            showbackground=False,
+            showticklabels=False,  # Completely hides the background coordinate numbers
+            zeroline=False
+        ),
+        zaxis=dict(
+            title=dict(text='Z (km)', font=dict(color="white")),
+            showgrid=False,
+            showbackground=False,
+            showticklabels=False,  # Completely hides the background coordinate numbers
+            zeroline=False
+        ),
+        aspectmode='data'
+    ),
+    margin=dict(r=0, l=0, b=0, t=50)
 )
 
 fig.show()

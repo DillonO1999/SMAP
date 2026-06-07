@@ -26,7 +26,6 @@ def lambert_universal(r1, r2, dt, mu):
     cos_dtheta = np.dot(r1, r2) / (r1_norm * r2_norm)
     cos_dtheta = np.clip(cos_dtheta, -1.0, 1.0)
     
-    # If points are exactly 180 degrees apart, nudge slightly to define a plane
     if cos_dtheta < -0.99999999:
         r2 = r2 + np.array([0.1, 0, 0]) 
         r2_norm = np.linalg.norm(r2)
@@ -34,33 +33,49 @@ def lambert_universal(r1, r2, dt, mu):
 
     dtheta = np.arccos(cos_dtheta)
     A = np.sin(dtheta) * np.sqrt(r1_norm * r2_norm / (1 - cos_dtheta))
+    
+    if A == 0:
+        return np.array([np.nan]*3), np.array([np.nan]*3)
 
     def time_of_flight_eq(z):
-        # STAGE 1: Clamp z to prevent the 'sinh' overflow you saw
-        z = np.clip(z, -100, 39.4)
-        
         C = stumpff_C(z)
         S = stumpff_S(z)
 
-        # STAGE 2: Ensure y is positive (physical constraint)
+        if C <= 1e-5:
+            return 1e15
+
         y = r1_norm + r2_norm + A * (z * S - 1) / np.sqrt(C)
         if y <= 0:
-            return 1e15 # Return a massive error to push the solver back
+            # Return a progressive positive error penalizing unphysical states
+            return 1e15 + abs(y) 
 
         chi = np.sqrt(y / C)
         dt_z = (chi**3 * S + A * np.sqrt(y)) / np.sqrt(mu)
         return dt_z - dt
 
+    # DYNAMIC BRACKETING: Locate where the sign change actually happens
+    lower_bound = -40.0
+    upper_bound = 39.4
+    
+    # Safely step the lower bound forward if it hits the unphysical y <= 0 region
+    while time_of_flight_eq(lower_bound) > 1e14 and lower_bound < upper_bound:
+        lower_bound += 0.5
+
     try:
-        # Tighter search bracket to keep the solver in 'reasonable' physics space
-        sol = root_scalar(time_of_flight_eq, bracket=[-150, 39.4], method='brentq')
+        sol = root_scalar(time_of_flight_eq, bracket=[lower_bound, upper_bound], method='brentq')
         z = sol.root
     except:
-        return np.array([np.nan]*3), np.array([np.nan]*3)
+        # Fallback to a broader physical search space if brentq gets stuck
+        try:
+            sol = root_scalar(time_of_flight_eq, bracket=[0.0, 39.4], method='brentq')
+            z = sol.root
+        except:
+            return np.array([np.nan]*3), np.array([np.nan]*3)
 
     # Re-calculate final velocities
     C, S = stumpff_C(z), stumpff_S(z)
     y = r1_norm + r2_norm + A * (z * S - 1) / np.sqrt(C)
+    
     f = 1 - y / r1_norm
     g = A * np.sqrt(y / mu)
     g_dot = 1 - y / r2_norm
